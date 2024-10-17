@@ -40,3 +40,6 @@ def elegir_modo_operacion():
         print("Opción no válida. Seleccionando CBC por defecto.")
         return AES.MODE_CBC
 
+
+
+# Función para cifrar un archivo
