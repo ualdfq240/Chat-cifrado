@@ -210,7 +210,7 @@ def descifrado_OFB(archivo, bits, clave):
 def main():
     bits = elegir_tamaño_clave()  # Seleccionar tamaño de la clave
     modo = elegir_modo_operacion()  # Seleccionar el modo de operación
-    archivoCifrado, clave = cifrar_archivo('archivo.txt', modo, bits)  # Cifrar el archivo usando los parámetros seleccionados
+    archivoCifrado, clave = cifrar_archivo('texto.txt', modo, bits)  # Cifrar el archivo usando los parámetros seleccionados
     descifrar_archivo(archivoCifrado, modo, bits, clave)  # Descifrar el archivo cifrado
 
 # Ejecutar la función principal
