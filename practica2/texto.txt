@@ -1,4 +1,3 @@
-El AES (Advanced Encryption Standard) es un algoritmo de cifrado simétrico que protege datos a través
-de bloques de 128 bits, utilizando claves de 128, 192 o 256 bits. Se basa en una estructura de 
-sustitución y permutación, aplicando múltiples rondas de transformación para convertir datos en 
-texto cifrado.
+La criptografía es el arte de escribir en clave. Es una herramienta fundamental en la seguridad de la
+ información. Con el cifrado César, puedes ocultar mensajes de forma sencilla. Recuerda siempre 
+ mantener tu clave en secreto.
