@@ -1,0 +1,3 @@
+La criptografía es el arte de escribir en clave. Es una herramienta fundamental en la seguridad de la
+ información. Con el cifrado César, puedes ocultar mensajes de forma sencilla. Recuerda siempre 
+ mantener tu clave en secreto.
