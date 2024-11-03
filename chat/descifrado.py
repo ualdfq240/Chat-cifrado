@@ -1,51 +1,46 @@
 from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_OAEP
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.Padding import unpad
 from Crypto.PublicKey import RSA
 
-def obtener_clave_privada(obtenidas=False, clave=''):
-    try:
-        if obtenidas and not clave:
-            print("Clave privada no proporcionada.")
-            exit()
+# Extraer la clave privada del RSA, por defecto se almacenará en el archivo 'clave_privada.txt'.
+def obtener_clave_privada(archivo_clave_privada= 'clave_privada.txt'):
+    with open(archivo_clave_privada, 'rb') as file:
+        clave = file.read()
+        file.close()
 
-        if not obtenidas:
-            with open('clave_privada.txt', 'rb') as file:
-                clave = file.read()
+    clave_privada = RSA.import_key(clave)
+    return clave_privada
 
-        clave_privada = RSA.import_key(clave)
-        return clave_privada
-
-    except (ValueError, TypeError, FileNotFoundError) as e:
-        print(f"Error al obtener la clave privada: {e}")
-        exit()
-
+# Extraer la clave del AES cifrada con RSA, el iv y los datos cifrados con AES, por defecto se encuentran en el archivo 'texto_cifrado.bin'.
 def obtener_datos(archivo_origen='texto_cifrado.bin'):
     with open(archivo_origen, 'rb') as file:
         datos = file.read()
     return datos
 
-def obtener_tamaño_clave(datos):
-    return int.from_bytes(datos[:4], byteorder='big')
+# Obtener la clave del AES cifrada con RSA, que tendrá un tamaño fijo 256 bytes (2048 bits) tal y como se especificó en la generación de las claves.
+def obtener_clave_cifrada(datos):
+    return datos[:256]
 
-def obtener_clave_cifrada(datos, tamaño_clave):
-    return datos[4:4 + tamaño_clave]
+# Obtener el iv del AES, que ocupará los siguientes 16 bytes (128 bits) a partir de los 256 bytes (2048 bits) de la clave AES cifrada.
+def obtener_iv(datos):
+    return datos[256: 256 + 16]
 
-def obtener_iv(datos, len_key):
-    return datos[4 + len_key : 4 + len_key + 16]
+# Obtener los datos cifrados, que ocuparán los bytes restantes a partir de los 256 bytes (2048 bits) de la clave AES cifrada y los 16 bytes (128 bits) del iv. 
+def obtener_datos_cifrados(datos):
+    return datos[256 + 16:]  
 
-def obtener_datos_cifrados(datos, len_key):
-    return datos[4 + len_key + 16:]  # Cambié el nombre para claridad
-
+# Descifrar la clave AES, usando la clave privada de la clave publica con la que se cifró la clave del AES.
 def obtener_clave_descifrada(clave_cifrada, private_key):
     cipher = PKCS1_OAEP.new(private_key)
     return cipher.decrypt(clave_cifrada)
 
+# Descifrar los datos cifrados con AES, usando su clave y su iv.
 def descifrar_datos(clave_descifrada, iv, datos):
     cipher = AES.new(clave_descifrada, AES.MODE_CBC, iv)
     return unpad(cipher.decrypt(datos), AES.block_size)
 
+# Escribir los datos descifrados, por defecto se escribirán en el archivo 'texto_descifrado.txt'.
 def escribir_datos(datos_descifrados, archivo_destino='texto_descifrado.txt'):
     with open(archivo_destino, 'w') as file:  # Cambié a modo 'w'
         file.write(datos_descifrados.decode('utf-8'))  # Asegúrate de que los datos sean texto
@@ -54,10 +49,9 @@ def escribir_datos(datos_descifrados, archivo_destino='texto_descifrado.txt'):
 if __name__ == "__main__":
     clave_privada = obtener_clave_privada()
     datos = obtener_datos()
-    tamaño_clave = obtener_tamaño_clave(datos)
-    clave_cifrada = obtener_clave_cifrada(datos, tamaño_clave)
-    iv = obtener_iv(datos, tamaño_clave)
-    datos_cifrados = obtener_datos_cifrados(datos, tamaño_clave)  # Asegúrate de que es correcto
+    clave_cifrada = obtener_clave_cifrada(datos)
+    iv = obtener_iv(datos)
+    datos_cifrados = obtener_datos_cifrados(datos)  
     clave_descifrada = obtener_clave_descifrada(clave_cifrada, clave_privada)
     datos_descifrados = descifrar_datos(clave_descifrada, iv, datos_cifrados)
     escribir_datos(datos_descifrados)
