@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageElement.classList.add("chat-message");
 
         messageElement.innerHTML = `
-        <strong>${data.username}-${data.recipient || 'todos'}:</strong>
+        <strong>${data.username}➔${data.recipient || 'todos'}:</strong>
         <button class="show-message-btn">Mostrar mensaje</button>
         <div class="message-content" style="display: none;" data-message="${data.message}"></div>
         `;
@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const messageContent = messageElement.querySelector(".message-content");
         if (messageContent.style.display === "none") {
             // Enviar el objeto data completo en lugar de solo el mensaje
-            socket.emit("decrypt_message", data.message);
+            socket.emit("decrypt_message", data.username, data.message);
         } else {
             messageContent.style.display = "none";
             showMessageBtn.textContent = "Mostrar mensaje";

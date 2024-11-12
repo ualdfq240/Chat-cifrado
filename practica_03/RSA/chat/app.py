@@ -33,8 +33,8 @@ def register():
         if not os.path.exists(user_dir):
             os.mkdir(user_dir)
         clave_privada = claves_RSA.generar_clave_privada()
-        claves_RSA.exportar_clave_privada(clave_privada, os.path.join(user_dir, 'clave_privada.txt'))
-        claves_RSA.exportar_clave_publica(clave_privada, os.path.join(user_dir, 'clave_publica.txt'))
+        claves_RSA.exportar_clave_privada(clave_privada, os.path.join(user_dir, 'clave_privada_RSA.txt'))
+        claves_RSA.exportar_clave_publica(clave_privada, os.path.join(user_dir, 'clave_publica_RSA.txt'))
 
         return redirect(url_for('chat', username=username))
     return 'El nombre de usuario ya existe o es inválido.'
@@ -72,9 +72,9 @@ def handle_message(data):
 
     # Obtener la clave pública del destinatario
     if recipient in users:
-        recipient_key_path = os.path.join(USERS_PATH, recipient, 'clave_publica.txt')
+        recipient_key_path = os.path.join(USERS_PATH, recipient, 'clave_publica_RSA.txt')
     else:
-        recipient_key_path = os.path.join(USERS_PATH, username, 'clave_publica.txt')
+        recipient_key_path = os.path.join(USERS_PATH, username, 'clave_publica_RSA.txt')
 
     # Cargar la clave pública del destinatario
     clave_publica = cifrado.obtener_clave_publica(recipient_key_path)
@@ -105,7 +105,7 @@ def handle_decrypt_message(data):
     username = session.get('username')
     
     user_dir = os.path.join(USERS_PATH, username)
-    private_key_path = os.path.join(user_dir, 'clave_privada.txt')
+    private_key_path = os.path.join(user_dir, 'clave_privada_RSA.txt')
     clave_privada = descifrado.obtener_clave_privada(private_key_path)
 
     try:

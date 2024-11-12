@@ -4,7 +4,7 @@ from Crypto.Util.Padding import unpad
 from Crypto.PublicKey import RSA
 
 # Extraer la clave privada del RSA, por defecto se almacenará en el archivo 'clave_privada.txt'.
-def obtener_clave_privada(archivo_clave_privada= 'clave_privada.txt'):
+def obtener_clave_privada(archivo_clave_privada= 'clave_privada_RSA.txt'):
     with open(archivo_clave_privada, 'rb') as file:
         clave = file.read()
         file.close()

@@ -4,13 +4,13 @@ def generar_clave_privada(bits=2048):
     """Genera una clave privada RSA de un tamaño especificado."""
     return RSA.generate(bits)
 
-def exportar_clave_privada(clave_privada, archivo='clave_privada.txt'):
+def exportar_clave_privada(clave_privada, archivo='clave_privada_RSA.txt'):
     """Exporta la clave privada a un archivo especificado."""
     with open(archivo, 'wb') as file:
         file.write(clave_privada.export_key())
     print(f'Clave privada exportada en el archivo {archivo}')
 
-def exportar_clave_publica(clave_privada, archivo='clave_publica.txt'):
+def exportar_clave_publica(clave_privada, archivo='clave_publica_RSA.txt'):
     """Obtiene la clave pública de una clave privada y la exporta a un archivo."""
     public_key = clave_privada.public_key()
     with open(archivo, 'wb') as file:
