@@ -1,4 +1,4 @@
-from cifrados import cifrado, descifrado, claves
+from cifrados import cifrado, descifrado, claves, claves_DSA, firmar, comprobar
 import os
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, send, emit
@@ -7,14 +7,22 @@ app = Flask(__name__)
 app.secret_key = "secret_key"
 socketio = SocketIO(app)
 
+mkdir = lambda path: os.makedirs(path, exist_ok=True) 
+file_exists = lambda path: os.path.exists(path) 
+join_path = lambda *args: os.path.join(*args)
+
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-GENERAL_CHATS_PATH = os.path.join(BASE_PATH, "general/chats")
-GENERAL_USERS_PATH = os.path.join(BASE_PATH, "general/users")
-LOCAL_USERS_PATH = os.path.join(BASE_PATH, "local/users")
+GENERAL_CHATS_PATH = join_path(BASE_PATH, "general/chats")
+GENERAL_USERS_PATH = join_path(BASE_PATH, "general/users")
+LOCAL_USERS_PATH = join_path(BASE_PATH, "local/users")
+SERVER_PATH = join_path(BASE_PATH, 'server')
 
 # Crear directorios generales si no existen
-os.makedirs(GENERAL_USERS_PATH, exist_ok=True)
-os.makedirs(LOCAL_USERS_PATH, exist_ok=True)
+mkdir(GENERAL_USERS_PATH)
+mkdir(LOCAL_USERS_PATH)
+mkdir(SERVER_PATH)
+
+pk, sk = claves_DSA.generar_y_exportar_claves(SERVER_PATH)
 
 users = {}
 connected_users = {}
@@ -30,16 +38,21 @@ def register():
         users[username] = username
         session['username'] = username
 
-        GENERAL_USER_PATH = os.path.join(GENERAL_USERS_PATH, username)
-        LOCAL_USER_PATH = os.path.join(LOCAL_USERS_PATH, username)
-        os.makedirs(GENERAL_USER_PATH, exist_ok=True)
-        os.makedirs(LOCAL_USER_PATH, exist_ok=True)
+        GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
+        LOCAL_USER_PATH = join_path(LOCAL_USERS_PATH, username)
+        LOCAL_USER_CHATS_PATH = join_path(LOCAL_USER_PATH, 'Registro chats')
+        mkdir(GENERAL_USER_PATH)
+        mkdir(LOCAL_USER_PATH)
+        
 
         # Generar y exportar claves
         clave_publica, clave_privada = claves.generar_claves_kyber()
-        claves.exportar_clave_publica(clave_publica, os.path.join(GENERAL_USER_PATH, 'clave_publica.txt'))
-        claves.exportar_clave_privada(clave_privada, os.path.join(LOCAL_USER_PATH, 'clave_privada.txt'))
+        claves.exportar_clave_privada(clave_privada, join_path(LOCAL_USER_PATH, 'clave_privada.txt'))
+
+        firma = firmar.firmar_mensaje(sk, clave_publica)
+        firmar.guardar_firma(join_path(GENERAL_USER_PATH, 'firma_clave_publica.txt'), clave_publica, firma)        
         
+
         return redirect(url_for('chat', username=username))
     return 'El nombre de usuario ya existe o es inválido.'
 
@@ -71,20 +84,24 @@ def handle_message(data):
     recipient = data.get('recipient')
     message = data['message'].encode()
 
-    LOCAL_USERNAME_PATH = os.path.join(LOCAL_USERS_PATH, username)
-    LOCAL_USERNAME_RECIPIENT_PATH = os.path.join(LOCAL_USERNAME_PATH, recipient)
-    os.makedirs(LOCAL_USERNAME_RECIPIENT_PATH, exist_ok=True)
+    LOCAL_USERNAME_PATH = join_path(LOCAL_USERS_PATH, username)
+    LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
+    mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
 
-    KEY_PATH = os.path.join(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
-    if os.path.exists(KEY_PATH):
+    KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
+    if file_exists(KEY_PATH):
+
         with open(KEY_PATH, 'rb') as file:
             clave = file.read()
+
+        
     else:
-        GENERAL_RECIPIENT_PATH = os.path.join(GENERAL_USERS_PATH, recipient)
-        clave_publica = cifrado.obtener_clave_publica(os.path.join(GENERAL_RECIPIENT_PATH, 'clave_publica.txt'))
-        GENERAL_RECIPIENT_USERNAME_PATH = os.path.join(GENERAL_RECIPIENT_PATH,username)
-        os.makedirs(GENERAL_RECIPIENT_USERNAME_PATH, exist_ok=True)
-        clave, c = cifrado.obtener_key_and_c(clave_publica, os.path.join(GENERAL_RECIPIENT_USERNAME_PATH,'c.txt'))
+        GENERAL_RECIPIENT_PATH = join_path(GENERAL_USERS_PATH, recipient)
+        print(file_exists(join_path(SERVER_PATH,'clave_publica.pem')))
+        clave_publica = comprobar.verify_signature(join_path(GENERAL_RECIPIENT_PATH, 'firma_clave_publica.txt'), pk)
+        GENERAL_RECIPIENT_USERNAME_PATH = join_path(GENERAL_RECIPIENT_PATH, username)
+        mkdir(GENERAL_RECIPIENT_USERNAME_PATH)
+        clave, c = cifrado.obtener_key_and_c(clave_publica, join_path(GENERAL_RECIPIENT_USERNAME_PATH, 'c.txt'))
         with open(KEY_PATH, 'wb') as file:
             file.write(clave)
 
@@ -100,37 +117,50 @@ def handle_message(data):
 
 @socketio.on('decrypt_message')
 def handle_decrypt_message(recipient, encrypted_message):
-
     username = session.get('username')
 
-    LOCAL_USERNAME_PATH = os.path.join(LOCAL_USERS_PATH, username)
-    LOCAL_USERNAME_RECIPIENT_PATH = os.path.join(LOCAL_USERNAME_PATH, recipient)
-    KEY_PATH = os.path.join(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
-    
+    print(username)
+    print(recipient)
+
+    LOCAL_USERNAME_PATH = join_path(LOCAL_USERS_PATH, username)
+    LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
+    KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
 
     try:
-        if os.path.exists(KEY_PATH):
+        if file_exists(KEY_PATH):
             with open(KEY_PATH, 'rb') as file:
                 clave = file.read()
         else:
-            GENERAL_RECIPIENT_PATH = os.path.join(GENERAL_USERS_PATH, recipient)
-            clave_publica = cifrado.obtener_clave_publica(os.path.join(GENERAL_RECIPIENT_PATH, 'clave_publica.txt'))
-            GENERAL_USERNAME_PATH = os.path.join(GENERAL_USERS_PATH, username)
-            GENERAL_USERNAME_RECIPIENT_PATH = os.path.join(GENERAL_USERNAME_PATH, recipient)
-            c = descifrado.obtener_c(os.path.join(GENERAL_USERNAME_RECIPIENT_PATH, 'c.txt'))
-            clave_privada = descifrado.obtener_clave_privada(os.path.join(LOCAL_USERNAME_PATH, 'clave_privada.txt'))
+
+            GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
+            GENERAL_USER_RECIPIENT_PATH = join_path(GENERAL_USER_PATH, recipient)
+            C_PATH = join_path(GENERAL_USER_RECIPIENT_PATH, 'c.txt')
+
+            c = descifrado.obtener_c(C_PATH)
+            PK_PATH = join_path(LOCAL_USERNAME_PATH, 'clave_privada.txt')
+
+            clave_privada = descifrado.obtener_clave_privada(PK_PATH)
             clave = descifrado.obtener_clave(clave_privada, c)
-            os.mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
+
+            mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
             with open(KEY_PATH, 'wb') as file:
                 file.write(clave)
+                file.close()
 
         iv = descifrado.obtener_iv(encrypted_message)
         datos_cifrados = descifrado.obtener_datos_cifrados(encrypted_message)
         message = descifrado.descifrar_datos(clave, iv, datos_cifrados).decode()
+        
     except Exception:
+        print(Exception)
         message = encrypted_message.hex()
 
     emit('decrypted_message', {'message': message}, to=request.sid)
 
+
+
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)
+
+
