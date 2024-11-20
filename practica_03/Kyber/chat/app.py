@@ -88,22 +88,38 @@ def handle_message(data):
     LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
     mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
 
+    LOCAL_RECIPIENT_PATH = join_path(LOCAL_USERS_PATH, recipient)
+
     KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
     if file_exists(KEY_PATH):
-
         with open(KEY_PATH, 'rb') as file:
             clave = file.read()
-
-        
     else:
         GENERAL_RECIPIENT_PATH = join_path(GENERAL_USERS_PATH, recipient)
-        print(file_exists(join_path(SERVER_PATH,'clave_publica.pem')))
-        clave_publica = comprobar.verify_signature(join_path(GENERAL_RECIPIENT_PATH, 'firma_clave_publica.txt'), pk)
-        GENERAL_RECIPIENT_USERNAME_PATH = join_path(GENERAL_RECIPIENT_PATH, username)
-        mkdir(GENERAL_RECIPIENT_USERNAME_PATH)
-        clave, c = cifrado.obtener_key_and_c(clave_publica, join_path(GENERAL_RECIPIENT_USERNAME_PATH, 'c.txt'))
-        with open(KEY_PATH, 'wb') as file:
-            file.write(clave)
+        try:
+            # Intentamos verificar la firma de la clave pública del destinatario
+            clave_publica = comprobar.verify_signature(join_path(GENERAL_RECIPIENT_PATH, 'firma_clave_publica.txt'),pk)
+
+            # Si la firma es válida, obtenemos la clave
+            GENERAL_RECIPIENT_USERNAME_PATH = join_path(GENERAL_RECIPIENT_PATH, username)
+            mkdir(GENERAL_RECIPIENT_USERNAME_PATH)
+            clave, c = cifrado.obtener_key_and_c(clave_publica, join_path(GENERAL_RECIPIENT_USERNAME_PATH, 'c.txt'))
+            with open(KEY_PATH, 'wb') as file:
+                file.write(clave)
+        except Exception as e:
+            # Si la firma no es válida, generamos nuevas claves y firma
+            print("La firma no es válida, generando nuevas claves y firma...")
+            clave_publica, clave_privada = claves.generar_claves_kyber()
+            
+            # Guardar la nueva clave privada
+            claves.exportar_clave_privada(clave_privada, join_path(LOCAL_RECIPIENT_PATH, 'clave_privada.txt'))
+
+            # Firmar la nueva clave pública y guardarla
+            firma = firmar.firmar_mensaje(sk, clave_publica)
+            firmar.guardar_firma(join_path(GENERAL_RECIPIENT_PATH, 'firma_clave_publica.txt'), clave_publica, firma)
+
+            print(e)
+            return
 
     iv = cifrado.obtener_iv()
     mensaje_cifrado = cifrado.cifrar_datos(clave, iv, message)
@@ -114,6 +130,7 @@ def handle_message(data):
         'recipient': recipient or 'todos',
         'message': message_crypto
     }, broadcast=True)
+
 
 @socketio.on('decrypt_message')
 def handle_decrypt_message(recipient, encrypted_message):
