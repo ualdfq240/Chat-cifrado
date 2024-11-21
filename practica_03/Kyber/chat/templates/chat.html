@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+    <script defer src="/static/chat.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>Bienvenido al Chat, {{ username }}</h2>
+        <div id="chat-box" class="chat-box"></div>
+
+        <!-- Botón para mostrar la lista de usuarios y el select para elegir el destinatario -->
+        <button id="show-users-btn">Mostrar Usuarios</button>
+        <select id="user-select">
+            <option value="">Mensaje para todos</option>
+        </select>
+
+        <form id="message-form" autocomplete="off">
+            <input type="text" id="message-input" placeholder="Escribe un mensaje..." required>
+            <button type="submit">Enviar</button>
+        </form>
+        <button id="shutdown-btn">Cerrar el Programa</button>
+
+    </div>
+</body>
+</html>
