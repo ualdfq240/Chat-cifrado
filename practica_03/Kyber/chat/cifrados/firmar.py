@@ -17,6 +17,7 @@ def guardar_firma(ruta_archivo, mensaje, firma):
         file.write(mensaje)
         file.write(firma)
         file.close()
+    print(f'firma guardada en {ruta_archivo}')
 
 def main():
     # Cargar la clave privada desde el archivo

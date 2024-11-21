@@ -130,8 +130,11 @@ def handle_message(data):
             clave_publica, clave_privada = claves.generar_claves_kyber()
             
             # Guardar la nueva clave privada
-            claves.exportar_clave_privada(clave_privada, join_path(LOCAL_RECIPIENT_PATH, 'clave_privada.txt'))
-
+            clave_contraseña = cifrado.obtener_32_bytes(users[recipient])
+            iv = cifrado.obtener_iv()
+            clave_privada_cifrada = cifrado.cifrar_datos(clave_contraseña, iv, clave_privada)
+            cifrado.escribir_datos(iv, clave_privada_cifrada, join_path(LOCAL_RECIPIENT_PATH, 'clave_privada.txt'))
+            
             # Firmar la nueva clave pública y guardarla
             firma = firmar.firmar_mensaje(sk, clave_publica)
             firmar.guardar_firma(join_path(GENERAL_RECIPIENT_PATH, 'firma_clave_publica.txt'), clave_publica, firma)
