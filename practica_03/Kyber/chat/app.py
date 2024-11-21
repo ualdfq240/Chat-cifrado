@@ -1,6 +1,7 @@
 from cifrados import cifrado, descifrado, claves, claves_DSA, firmar, comprobar
 import os
-from flask import Flask, render_template, request, redirect, url_for, session
+import shutil
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_socketio import SocketIO, send, emit
 
 app = Flask(__name__)
@@ -10,19 +11,20 @@ socketio = SocketIO(app)
 mkdir = lambda path: os.makedirs(path, exist_ok=True) 
 file_exists = lambda path: os.path.exists(path) 
 join_path = lambda *args: os.path.join(*args)
+delete_dir = lambda path: shutil.rmtree(path) if os.path.exists(path) else None
+
+
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 GENERAL_CHATS_PATH = join_path(BASE_PATH, "general/chats")
 GENERAL_USERS_PATH = join_path(BASE_PATH, "general/users")
 LOCAL_USERS_PATH = join_path(BASE_PATH, "local/users")
-SERVER_PATH = join_path(BASE_PATH, 'server')
 
 # Crear directorios generales si no existen
 mkdir(GENERAL_USERS_PATH)
 mkdir(LOCAL_USERS_PATH)
-mkdir(SERVER_PATH)
 
-pk, sk = claves_DSA.generar_y_exportar_claves(SERVER_PATH)
+sk, pk = claves_DSA.generar_claves_dsa()
 
 users = {}
 connected_users = {}
@@ -34,27 +36,43 @@ def home():
 @app.route('/register', methods=['POST'])
 def register():
     username = request.form['username']
-    if username and username not in users:
-        users[username] = username
-        session['username'] = username
+    password = request.form['password']  # Obtener la contraseña
+    if username and password:
+        if username not in users:
+            # Registrar usuario nuevo
+            users[username] = password
+            session['username'] = username
 
-        GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
-        LOCAL_USER_PATH = join_path(LOCAL_USERS_PATH, username)
-        LOCAL_USER_CHATS_PATH = join_path(LOCAL_USER_PATH, 'Registro chats')
-        mkdir(GENERAL_USER_PATH)
-        mkdir(LOCAL_USER_PATH)
+            GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
+            LOCAL_USER_PATH = join_path(LOCAL_USERS_PATH, username)
+            LOCAL_USER_CHATS_PATH = join_path(LOCAL_USER_PATH, 'Registro chats')
+            mkdir(GENERAL_USER_PATH)
+            mkdir(LOCAL_USER_PATH)
         
 
-        # Generar y exportar claves
-        clave_publica, clave_privada = claves.generar_claves_kyber()
-        claves.exportar_clave_privada(clave_privada, join_path(LOCAL_USER_PATH, 'clave_privada.txt'))
+            # Generar y exportar claves
+            clave_publica, clave_privada = claves.generar_claves_kyber()
 
-        firma = firmar.firmar_mensaje(sk, clave_publica)
-        firmar.guardar_firma(join_path(GENERAL_USER_PATH, 'firma_clave_publica.txt'), clave_publica, firma)        
-        
+            
+            clave_contraseña = cifrado.obtener_32_bytes(users[username])
+            iv = cifrado.obtener_iv()
+            clave_privada_cifrada = cifrado.cifrar_datos(clave_contraseña, iv, clave_privada)
+            cifrado.escribir_datos(iv, clave_privada_cifrada, join_path(LOCAL_USER_PATH, 'clave_privada.txt'))
+            
 
-        return redirect(url_for('chat', username=username))
-    return 'El nombre de usuario ya existe o es inválido.'
+
+            firma = firmar.firmar_mensaje(sk, clave_publica)
+            firmar.guardar_firma(join_path(GENERAL_USER_PATH, 'firma_clave_publica.txt'), clave_publica, firma)
+            
+            
+            return redirect(url_for('chat', username=username))
+        elif users[username] == password:
+            # Validar si la contraseña coincide
+            session['username'] = username
+            return redirect(url_for('chat', username=username))
+        else:
+            return 'Contraseña incorrecta.'
+    return 'El nombre de usuario o contraseña no son válidos.'
 
 @app.route('/chat/<username>')
 def chat(username):
@@ -136,9 +154,6 @@ def handle_message(data):
 def handle_decrypt_message(recipient, encrypted_message):
     username = session.get('username')
 
-    print(username)
-    print(recipient)
-
     LOCAL_USERNAME_PATH = join_path(LOCAL_USERS_PATH, username)
     LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
     KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
@@ -156,7 +171,12 @@ def handle_decrypt_message(recipient, encrypted_message):
             c = descifrado.obtener_c(C_PATH)
             PK_PATH = join_path(LOCAL_USERNAME_PATH, 'clave_privada.txt')
 
-            clave_privada = descifrado.obtener_clave_privada(PK_PATH)
+            iv_AND_clave_privada_cifrada = descifrado.obtener_datos(PK_PATH)
+            iv = descifrado.obtener_iv(iv_AND_clave_privada_cifrada)
+            clave_privada_cifrada = descifrado.obtener_datos_cifrados(iv_AND_clave_privada_cifrada)
+            clave_contraseña = cifrado.obtener_32_bytes(users[username])
+            clave_privada = descifrado.descifrar_datos(clave_contraseña, iv, clave_privada_cifrada)
+            
             clave = descifrado.obtener_clave(clave_privada, c)
 
             mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
@@ -164,6 +184,7 @@ def handle_decrypt_message(recipient, encrypted_message):
                 file.write(clave)
                 file.close()
 
+            delete_dir(GENERAL_USER_RECIPIENT_PATH)
         iv = descifrado.obtener_iv(encrypted_message)
         datos_cifrados = descifrado.obtener_datos_cifrados(encrypted_message)
         message = descifrado.descifrar_datos(clave, iv, datos_cifrados).decode()
@@ -175,7 +196,24 @@ def handle_decrypt_message(recipient, encrypted_message):
     emit('decrypted_message', {'message': message}, to=request.sid)
 
 
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    # Rutas de directorios a eliminar
+    paths_to_delete = [join_path(BASE_PATH, 'local'), join_path(BASE_PATH, 'general')] 
 
+
+    try:
+        # Eliminar directorios si existen
+        for path in paths_to_delete:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+        # Finalizar la aplicación
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func:
+            func()
+        return jsonify({"message": "El servidor se cerró correctamente y los archivos fueron eliminados."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

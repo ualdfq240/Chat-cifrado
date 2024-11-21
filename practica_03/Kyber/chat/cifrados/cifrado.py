@@ -3,6 +3,7 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad
 from kyber import Kyber512
+from Crypto.Hash import SHA256
 import os
 
 # Extraer los datos a cifrar, por defecto se almacenarán en el archivo 'texto.txt'.
@@ -26,6 +27,23 @@ def obtener_key_and_c(clave_publica, archivo_c="c.txt"):
         file.write(c)
         file.close()
     return key, c
+
+
+def obtener_32_bytes(texto):
+    """
+    Genera 32 bytes a partir de un texto o número usando SHA-256.
+
+    :param texto: Texto o número a convertir (str o int).
+    :return: Bytes generados de 32 bytes (SHA-256 hash).
+    """
+    if isinstance(texto, int):
+        texto = str(texto)  # Convierte el número a cadena
+    elif not isinstance(texto, str):
+        raise ValueError("El texto debe ser una cadena o un número.")
+    
+    # Crea un objeto hash y devuelve el digest de 32 bytes
+    hash_obj = SHA256.new(data=texto.encode('utf-8'))
+    return hash_obj.digest() 
 
 # Obtener el iv del AES para cifrar los datos, este tendrá un tamaño de 16 bytes (128 bits).
 def obtener_iv():

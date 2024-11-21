@@ -67,3 +67,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+    const shutdownBtn = document.getElementById("shutdown-btn");
+
+    shutdownBtn.addEventListener("click", () => {
+        fetch('/shutdown', {
+            method: 'POST',
+        })
+        .then(response => {
+            if (response.ok) {
+                alert("El servidor se cerró correctamente.");
+                window.close(); // Cierra la pestaña actual
+            } else {
+                alert("Ocurrió un error al intentar cerrar el programa.");
+            }
+        })
+        .catch(err => console.error("Error al cerrar el programa:", err));
+    });
+});
