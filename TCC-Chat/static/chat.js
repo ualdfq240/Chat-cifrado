@@ -75,6 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
             showMessageBtn.textContent = "Ocultar mensaje";
         }
     });
+    socket.on("alert_message", (data) => {
+        // Muestra el mensaje en una ventana emergente
+        alert(data.message);
+    });
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -94,7 +98,14 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(err => console.error("Error al cerrar el programa:", err));
     });
+
+
+    
 });
+
+
+
+
 
 
 
