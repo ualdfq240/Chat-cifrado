@@ -17,6 +17,7 @@ def guardar_firma(ruta_archivo, mensaje, firma):
         file.write(mensaje)
         file.write(firma)
         file.close()
+    
     print(f'firma guardada en {ruta_archivo}')
 
 def main():
@@ -30,7 +31,7 @@ def main():
     signature = firmar_mensaje(private_key, message)
 
     # Guardar el texto firmado y la firma en un archivo JSON
-    guardar_firma("firma.txt", message, signature)
+    # guardar_firma("firma.txt", message, signature)
 
     print("Texto firmado y guardado en 'firma.txt'")
 

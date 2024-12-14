@@ -12,6 +12,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     socket.on("user_list", (users) => {
         userSelect.innerHTML = ''; // Limpiar las opciones
+    
+        // Agregar la opción "todos"
+        const option = document.createElement("option");
+        option.value = "todos";
+        option.textContent = "todos";
+        userSelect.appendChild(option);
+    
+        // Agregar las opciones de los usuarios
         users.forEach(user => {
             const option = document.createElement("option");
             option.value = user;
@@ -19,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
             userSelect.appendChild(option);
         });
     });
+    
     
 
     messageForm.addEventListener("submit", (event) => {
@@ -48,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const messageContent = messageElement.querySelector(".message-content");
         if (messageContent.style.display === "none") {
             // Enviar el objeto data completo en lugar de solo el mensaje
-            socket.emit("decrypt_message", data.username, data.message);
+            socket.emit("decrypt_message", data.username, data.message, data.tipo, data.padding_Size);
         } else {
             messageContent.style.display = "none";
             showMessageBtn.textContent = "Mostrar mensaje";
