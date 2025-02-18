@@ -165,16 +165,23 @@ def handle_message(data):
 @socketio.on('decrypt_message')
 def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
     username = session.get('username')
-    encrypted_message = verificar_firma(None, 'mensaje', padding_Size=padding_Size, mensaje=certificado)
+    LOCAL_USERNAME_PATH = join_path(LOCAL_USERS_PATH, username)
+    LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
+    KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
+    GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
+    GENERAL_USER_RECIPIENT_PATH = join_path(GENERAL_USER_PATH, recipient)
+    LOCAL_RECIPIENT_PATH = join_path(LOCAL_USERS_PATH, recipient)
+    LOCAL_RECIPIENT_USER_PATH = join_path(LOCAL_RECIPIENT_PATH, username)
+    try: 
+        encrypted_message = verificar_firma(None, 'mensaje', padding_Size=padding_Size, mensaje=certificado)
+    except:
+        delete_dir(GENERAL_USER_RECIPIENT_PATH)
+
+        delete_dir(LOCAL_RECIPIENT_USER_PATH)
+        socketio.emit("alert_message", {"message": f"La firma del mensaje ha sido inválida, solicite el mensaje de nuevo"})
+
     if tipo != "general":
-        LOCAL_USERNAME_PATH = join_path(LOCAL_USERS_PATH, username)
-        LOCAL_USERNAME_RECIPIENT_PATH = join_path(LOCAL_USERNAME_PATH, recipient)
-        KEY_PATH = join_path(LOCAL_USERNAME_RECIPIENT_PATH, 'key.txt')
-        fallo_Firma = True
-        GENERAL_USER_PATH = join_path(GENERAL_USERS_PATH, username)
-        GENERAL_USER_RECIPIENT_PATH = join_path(GENERAL_USER_PATH, recipient)
-        LOCAL_RECIPIENT_PATH = join_path(LOCAL_USERS_PATH, recipient)
-        LOCAL_RECIPIENT_USER_PATH = join_path(LOCAL_RECIPIENT_PATH, username)
+        
        
         try:
             if file_exists(KEY_PATH):
@@ -182,11 +189,8 @@ def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
             else:
                 C_PATH = join_path(GENERAL_USER_RECIPIENT_PATH, 'firma_c.txt')
 
-                
-                
                 c = verificar_firma(C_PATH, "c")
                 PK_PATH = join_path(LOCAL_USERNAME_PATH, 'clave_privada.txt')
-                fallo_Firma = False
                 clave_privada = descifrar_local(username, PK_PATH)
                 clave = descifrado.obtener_clave(clave_privada, c)
 
@@ -199,11 +203,11 @@ def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
             message = descifrado.descifrar_datos(clave, iv, datos_cifrados).decode()
             
         except Exception:
-            if fallo_Firma:
-                delete_dir(GENERAL_USER_RECIPIENT_PATH)
+            
+            delete_dir(GENERAL_USER_RECIPIENT_PATH)
 
-                delete_dir(LOCAL_RECIPIENT_USER_PATH)
-                socketio.emit("alert_message", {"message": "La firma de c ha sido inválida, solicite el mensaje de nuevo"})
+            delete_dir(LOCAL_RECIPIENT_USER_PATH)
+            socketio.emit("alert_message", {"message": f"La firma de c ha sido inválida, solicite el mensaje de nuevo"})
                 
             print(Exception)
             message = encrypted_message.hex()
@@ -217,8 +221,6 @@ def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
 def shutdown():
     # Rutas de directorios a eliminar
     paths_to_delete = [join_path(BASE_PATH, 'local'), join_path(BASE_PATH, 'general')] 
-
-
     try:
         # Eliminar directorios si existen
         for path in paths_to_delete:
