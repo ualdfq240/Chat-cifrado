@@ -118,6 +118,8 @@ def handle_message(data):
                 GENERAL_RECIPIENT_USERNAME_PATH = join_path(GENERAL_RECIPIENT_PATH, username)
                 mkdir(GENERAL_RECIPIENT_USERNAME_PATH)
                 clave, c = cifrado.obtener_key_and_c(clave_publica,sk, join_path(GENERAL_RECIPIENT_USERNAME_PATH, 'firma_c.txt'))
+                print(c)
+                print(len(c))
                 cifrar_local(username, clave, KEY_PATH)
             except Exception as e:
                 # Generar nuevas claves y firma si la verificación falla
@@ -188,11 +190,14 @@ def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
                 clave = descifrar_local(username, KEY_PATH)
             else:
                 C_PATH = join_path(GENERAL_USER_RECIPIENT_PATH, 'firma_c.txt')
-
                 c = verificar_firma(C_PATH, "c")
                 PK_PATH = join_path(LOCAL_USERNAME_PATH, 'clave_privada.txt')
                 clave_privada = descifrar_local(username, PK_PATH)
+                print(c)
+                print(len(c))
+                # es aqui
                 clave = descifrado.obtener_clave(clave_privada, c)
+
 
                 mkdir(LOCAL_USERNAME_RECIPIENT_PATH)
                 cifrar_local(username, clave, KEY_PATH)
@@ -202,8 +207,7 @@ def handle_decrypt_message(recipient, certificado, tipo, padding_Size):
             datos_cifrados = descifrado.obtener_datos_cifrados(encrypted_message)
             message = descifrado.descifrar_datos(clave, iv, datos_cifrados).decode()
             
-        except Exception:
-            
+        except Exception :
             delete_dir(GENERAL_USER_RECIPIENT_PATH)
 
             delete_dir(LOCAL_RECIPIENT_USER_PATH)

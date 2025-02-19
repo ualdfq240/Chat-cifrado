@@ -2,9 +2,9 @@ from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad
-from kyber import Kyber512
 from Crypto.Hash import SHA256
 from cifrados import firmar
+from cifrados.kyber_py.kyber import Kyber512
 
 # Extraer los datos a cifrar, por defecto se almacenarán en el archivo 'texto.txt'.
 def obtener_datos(archivo_origen='texto.txt'):
@@ -22,7 +22,7 @@ def obtener_clave_publica(archivo_clave_publica= 'clave_publica.txt'):
     return clave
 
 def obtener_key_and_c(clave_publica,sk, archivo_c="firma_c.txt"):
-    c, key = Kyber512.enc(clave_publica)
+    key, c = Kyber512.encaps(clave_publica)
     firma_c = firmar.firmar_mensaje(sk, c)
     firmar.guardar_firma(archivo_c, c, firma_c)
     
@@ -64,10 +64,3 @@ def escribir_datos(iv, datos, archivo_destino='texto_cifrado.bin'):
         file.close()
     print(f'Datos cifrados con exito y almacenados en el archivo {archivo_destino}')
 
-if __name__ == "__main__":
-    clave_publica = obtener_clave_publica()
-    datos = obtener_datos()
-    # clave, c = obtener_key_and_c(clave_publica)
-    iv = obtener_iv()
-  #  datos_cifrados = cifrar_datos(clave, iv, datos)
-    # escribir_datos(iv, datos_cifrados)

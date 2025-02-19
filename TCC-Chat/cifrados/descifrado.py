@@ -2,7 +2,7 @@ from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Util.Padding import unpad
 from Crypto.PublicKey import RSA
-from kyber import Kyber512
+from cifrados.kyber_py.kyber import Kyber512
 
 # Extraer la clave privada del RSA, por defecto se almacenará en el archivo 'clave_privada.txt'.
 def obtener_clave_privada(archivo_clave_privada= 'clave_privada.txt'):
@@ -27,7 +27,7 @@ def obtener_c(archivo_c="c.txt"):
 
 # Obtener la clave del AES cifrada con RSA, que tendrá un tamaño fijo 256 bytes (2048 bits) tal y como se especificó en la generación de las claves.
 def obtener_clave(clave_privada, c):
-    return Kyber512.dec(c, clave_privada)
+    return Kyber512.decaps(c, clave_privada)
 
 # Obtener el iv del AES, que ocupará los siguientes 16 bytes (128 bits) a partir de los 256 bytes (2048 bits) de la clave AES cifrada.
 def obtener_iv(datos):

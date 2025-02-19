@@ -1,4 +1,4 @@
-from kyber import Kyber512  # Librería hipotética de Kyber512
+from cifrados.kyber_py.kyber import Kyber512  
 
 def generar_claves_kyber():
     """Genera las claves pública y privada de Kyber512."""
@@ -16,14 +16,3 @@ def exportar_clave_publica(clave_publica, archivo='clave_publica.txt'):
         file.write(clave_publica)
     print(f'Clave pública exportada en el archivo {archivo}')
 
-def main():
-    # Generar las claves pública y privada
-    pk, sk = generar_claves_kyber()
-    # Exportar clave privada
-    exportar_clave_privada(sk)
-    
-    # Exportar clave pública
-    exportar_clave_publica(pk)
-
-if __name__ == '__main__':
-    main()
